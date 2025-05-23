@@ -1,0 +1,1420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gubby AI</title>
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --light-color: #f8f9fa;
+            --dark-color: #343a40;
+            --text-color: #212529;
+            --border-color: #dee2e6;
+            --user-msg-bg: #007bff;
+            --user-msg-text: white;
+            --bot-msg-bg: #e9ecef;
+            --bot-msg-text: black;
+            --brain-bg: #fdfdfe;
+            --brain-border: #e0e0e0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background-color: var(--light-color);
+            color: var(--text-color);
+        }
+
+        .header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 15px 20px;
+            text-align: center;
+            font-size: 1.5em;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .main-container {
+            display: flex;
+            flex-grow: 1;
+            overflow: hidden; /* Important for layout */
+        }
+
+        .sidebar {
+            width: 280px;
+            background-color: #fff;
+            border-right: 1px solid var(--border-color);
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .sidebar h2 {
+            font-size: 1.2em;
+            margin-top: 0;
+            color: var(--primary-color);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        .sidebar button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            width: 100%;
+        }
+
+        .sidebar button:hover {
+            background-color: #0056b3;
+        }
+        
+        .sidebar button.secondary {
+            background-color: var(--secondary-color);
+        }
+        .sidebar button.secondary:hover {
+            background-color: #545b62;
+        }
+
+
+        #conversations-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            flex-grow: 1;
+        }
+
+        #conversations-list li {
+            padding: 10px;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background-color 0.2s;
+        }
+
+        #conversations-list li:hover {
+            background-color: #f0f8ff;
+        }
+        
+        #conversations-list li.active-conversation {
+            background-color: #e0efff;
+            font-weight: bold;
+        }
+
+        #conversations-list .convo-title {
+            flex-grow: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-right: 5px;
+        }
+        #conversations-list .delete-convo-btn {
+            background: none;
+            border: none;
+            color: #dc3545;
+            cursor: pointer;
+            padding: 2px 5px;
+            font-size: 0.9em;
+        }
+
+
+        .chat-area {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 0; /* No padding on chat-area itself */
+            background-color: #ffffff;
+            overflow: hidden; /* For chat-output scrolling */
+        }
+
+        .chat-header-controls {
+            padding: 10px 20px;
+            border-bottom: 1px solid var(--border-color);
+            background-color: var(--light-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .chat-header-controls label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+        .chat-header-controls input[type="checkbox"] {
+            margin-right: 8px;
+        }
+        .status-bar {
+            font-size: 0.8em;
+            color: var(--secondary-color);
+        }
+
+
+        #chat-output {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .message {
+            max-width: 70%;
+            padding: 10px 15px;
+            border-radius: 15px;
+            margin-bottom: 10px;
+            line-height: 1.4;
+            position: relative;
+        }
+        .message .msg-text {
+            word-wrap: break-word;
+        }
+
+        .message.user {
+            background-color: var(--user-msg-bg);
+            color: var(--user-msg-text);
+            align-self: flex-end;
+            border-bottom-right-radius: 5px;
+        }
+
+        .message.bot {
+            background-color: var(--bot-msg-bg);
+            color: var(--bot-msg-text);
+            align-self: flex-start;
+            border-bottom-left-radius: 5px;
+        }
+        
+        .message-meta {
+            font-size: 0.75em;
+            color: rgba(0,0,0,0.5);
+            margin-top: 5px;
+            text-align: right;
+        }
+        .message.user .message-meta {
+             color: rgba(255,255,255,0.7);
+        }
+        .message .edit-btn, .message .delete-msg-btn {
+            font-size: 0.7em;
+            background: none;
+            border: none;
+            cursor: pointer;
+            margin-left: 5px;
+            padding: 0;
+            opacity: 0.6;
+        }
+        .message:hover .edit-btn, .message:hover .delete-msg-btn {
+            opacity: 1;
+        }
+         .message.user .edit-btn, .message.user .delete-msg-btn { color: var(--user-msg-text); }
+         .message.bot .edit-btn, .message.bot .delete-msg-btn { color: var(--bot-msg-text); }
+
+
+        .brain-output {
+            background-color: var(--brain-bg);
+            border: 1px solid var(--brain-border);
+            border-radius: 5px;
+            padding: 10px;
+            margin-top: 8px;
+            font-size: 0.85em;
+            color: #555;
+            white-space: pre-wrap; /* Preserve line breaks */
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .brain-output-header {
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 5px;
+            color: var(--secondary-color);
+        }
+        .brain-output-header::before {
+            content: '▶ '; /* Collapsed state */
+            font-size: 0.8em;
+        }
+        .brain-output.expanded .brain-output-header::before {
+            content: '▼ '; /* Expanded state */
+        }
+        .brain-content {
+            display: none;
+        }
+        .brain-output.expanded .brain-content {
+            display: block;
+        }
+
+
+        .chat-input-area {
+            display: flex;
+            padding: 15px 20px;
+            border-top: 1px solid var(--border-color);
+            background-color: var(--light-color);
+        }
+
+        #chat-input {
+            flex-grow: 1;
+            padding: 10px 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            margin-right: 10px;
+            font-size: 1em;
+        }
+
+        #send-button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.2s;
+        }
+
+        #send-button:hover {
+            background-color: #0056b3;
+        }
+
+        /* Modal for editing */
+        .modal {
+            display: none; 
+            position: fixed; 
+            z-index: 1000; 
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto; 
+            background-color: rgba(0,0,0,0.4); 
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto; 
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 500px;
+            border-radius: 8px;
+        }
+        .modal-content textarea {
+            width: 95%;
+            min-height: 100px;
+            margin-bottom: 10px;
+        }
+        .close-btn {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close-btn:hover,
+        .close-btn:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="header">Gubby AI</div>
+
+    <div class="main-container">
+        <div class="sidebar">
+            <h2>Conversations</h2>
+            <button id="new-chat-button">New Chat</button>
+            <ul id="conversations-list">
+                <!-- Conversation items will be populated here -->
+            </ul>
+            <hr>
+             <h2>Settings</h2>
+            <button id="train-button">Train Model (500 Epochs)</button>
+            <p id="model-status" class="status-bar">Model status: Untrained</p>
+            <p id="parameter-count" class="status-bar">Parameters: N/A</p>
+            <button id="save-model-button" class="secondary">Save Model State</button>
+            <button id="load-model-button" class="secondary">Load Model State</button>
+            <label for="import-model-file" class="secondary" style="display: block; text-align: center; padding: 10px; margin-bottom: 10px; border-radius: 5px; cursor: pointer;">Import Model File</label>
+            <input type="file" id="import-model-file" accept=".json" style="display: none;">
+            <a id="export-model-link" download="gubby_ai_model.json" style="display:none;"></a>
+
+
+        </div>
+
+        <div class="chat-area">
+            <div class="chat-header-controls">
+                 <label for="brain-mode-checkbox">
+                    <input type="checkbox" id="brain-mode-checkbox">
+                    Brain Mode
+                </label>
+                <button id="add-to-dataset-button" title="Add last user/bot exchange to training data for next retrain" style="padding: 5px 10px; font-size:0.8em;">+ Add to Dataset</button>
+            </div>
+            <div id="chat-output">
+                <!-- Messages will appear here -->
+            </div>
+            <div class="chat-input-area">
+                <input type="text" id="chat-input" placeholder="Type your message to Gubby AI...">
+                <button id="send-button">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for editing messages -->
+    <div id="edit-modal" class="modal">
+      <div class="modal-content">
+        <span class="close-btn" id="close-modal-btn">×</span>
+        <h3>Edit Message</h3>
+        <textarea id="edit-message-textarea"></textarea>
+        <button id="save-edited-message-btn">Save Changes</button>
+      </div>
+    </div>
+
+    <script>
+        // --- Enhanced Matrix Operations ---
+        class Matrix {
+            constructor(rows, cols) {
+                this.rows = rows;
+                this.cols = cols;
+                this.data = Array(this.rows).fill(0).map(() => Array(this.cols).fill(0));
+            }
+
+            static fromArray(arr) {
+                let m = new Matrix(arr.length, 1);
+                for (let i = 0; i < arr.length; i++) {
+                    m.data[i][0] = arr[i];
+                }
+                return m;
+            }
+
+            toArray() {
+                let arr = [];
+                for (let i = 0; i < this.rows; i++) {
+                    for (let j = 0; j < this.cols; j++) {
+                        arr.push(this.data[i][j]);
+                    }
+                }
+                return arr;
+            }
+
+            xavierInit(fanIn, fanOut) {
+                const limit = Math.sqrt(6 / (fanIn + fanOut));
+                for (let i = 0; i < this.rows; i++) {
+                    for (let j = 0; j < this.cols; j++) {
+                        this.data[i][j] = (Math.random() * 2 - 1) * limit;
+                    }
+                }
+            }
+
+            heInit(fanIn) {
+                const std = Math.sqrt(2 / fanIn);
+                for (let i = 0; i < this.rows; i++) {
+                    for (let j = 0; j < this.cols; j++) {
+                        this.data[i][j] = this.randomNormal() * std;
+                    }
+                }
+            }
+
+            randomNormal() {
+                let u = 0, v = 0;
+                while(u === 0) u = Math.random();
+                while(v === 0) v = Math.random();
+                return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+            }
+
+            randomize() {
+                for (let i = 0; i < this.rows; i++) {
+                    for (let j = 0; j < this.cols; j++) {
+                        this.data[i][j] = Math.random() * 2 - 1;
+                    }
+                }
+            }
+
+            add(n) {
+                if (n instanceof Matrix) {
+                    if (this.rows !== n.rows || this.cols !== n.cols) {
+                        console.error("Matrices for addition must have same dimensions.");
+                        return null;
+                    }
+                    let result = new Matrix(this.rows, this.cols);
+                    for (let i = 0; i < this.rows; i++) {
+                        for (let j = 0; j < this.cols; j++) {
+                            result.data[i][j] = this.data[i][j] + n.data[i][j];
+                        }
+                    }
+                    return result;
+                } else {
+                    let result = new Matrix(this.rows, this.cols);
+                    for (let i = 0; i < this.rows; i++) {
+                        for (let j = 0; j < this.cols; j++) {
+                            result.data[i][j] = this.data[i][j] + n;
+                        }
+                    }
+                    return result;
+                }
+            }
+
+            subtract(n) {
+                if (this.rows !== n.rows || this.cols !== n.cols) {
+                    console.error("Matrices for subtraction must have same dimensions.");
+                    return null;
+                }
+                let result = new Matrix(this.rows, this.cols);
+                for (let i = 0; i < this.rows; i++) {
+                    for (let j = 0; j < this.cols; j++) {
+                        result.data[i][j] = this.data[i][j] - n.data[i][j];
+                    }
+                }
+                return result;
+            }
+
+            static subtract(a, b) {
+                if (a.rows !== b.rows || a.cols !== b.cols) {
+                    console.error("Matrices for static subtraction must have same dimensions.");
+                    return null;
+                }
+                let result = new Matrix(a.rows, a.cols);
+                for (let i = 0; i < a.rows; i++) {
+                    for (let j = 0; j < a.cols; j++) {
+                        result.data[i][j] = a.data[i][j] - b.data[i][j];
+                    }
+                }
+                return result;
+            }
+
+            multiply(n) {
+                if (n instanceof Matrix) {
+                    if (this.cols !== n.rows) {
+                        console.error("Columns of A must match rows of B for multiplication.");
+                        return null;
+                    }
+                    let result = new Matrix(this.rows, n.cols);
+                    for (let i = 0; i < result.rows; i++) {
+                        for (let j = 0; j < result.cols; j++) {
+                            let sum = 0;
+                            for (let k = 0; k < this.cols; k++) {
+                                sum += this.data[i][k] * n.data[k][j];
+                            }
+                            result.data[i][j] = sum;
+                        }
+                    }
+                    return result;
+                } else {
+                    let result = new Matrix(this.rows, this.cols);
+                    for (let i = 0; i < this.rows; i++) {
+                        for (let j = 0; j < this.cols; j++) {
+                            result.data[i][j] = this.data[i][j] * n;
+                        }
+                    }
+                    return result;
+                }
+            }
+
+            hadamard(n) {
+                if (this.rows !== n.rows || this.cols !== n.cols) {
+                    console.error("Matrices for Hadamard product must have same dimensions.");
+                    return null;
+                }
+                let result = new Matrix(this.rows, this.cols);
+                for (let i = 0; i < this.rows; i++) {
+                    for (let j = 0; j < this.cols; j++) {
+                        result.data[i][j] = this.data[i][j] * n.data[i][j];
+                    }
+                }
+                return result;
+            }
+
+            transpose() {
+                let result = new Matrix(this.cols, this.rows);
+                for (let i = 0; i < this.rows; i++) {
+                    for (let j = 0; j < this.cols; j++) {
+                        result.data[j][i] = this.data[i][j];
+                    }
+                }
+                return result;
+            }
+
+            map(func) {
+                let result = new Matrix(this.rows, this.cols);
+                for (let i = 0; i < this.rows; i++) {
+                    for (let j = 0; j < this.cols; j++) {
+                        result.data[i][j] = func(this.data[i][j]);
+                    }
+                }
+                return result;
+            }
+
+            static map(matrix, func) {
+                let result = new Matrix(matrix.rows, matrix.cols);
+                for (let i = 0; i < matrix.rows; i++) {
+                    for (let j = 0; j < matrix.cols; j++) {
+                        result.data[i][j] = func(matrix.data[i][j]);
+                    }
+                }
+                return result;
+            }
+
+            dropout(rate) {
+                let result = new Matrix(this.rows, this.cols);
+                for (let i = 0; i < this.rows; i++) {
+                    for (let j = 0; j < this.cols; j++) {
+                        if (Math.random() < rate) {
+                            result.data[i][j] = 0;
+                        } else {
+                            result.data[i][j] = this.data[i][j] / (1 - rate); 
+                        }
+                    }
+                }
+                return result;
+            }
+
+            l2Norm() {
+                let sum = 0;
+                for (let i = 0; i < this.rows; i++) {
+                    for (let j = 0; j < this.cols; j++) {
+                        sum += this.data[i][j] * this.data[i][j];
+                    }
+                }
+                return Math.sqrt(sum);
+            }
+        }
+
+        class ActivationFunctions {
+            static sigmoid(x) { return 1 / (1 + Math.exp(-Math.max(-500, Math.min(500, x)))); }
+            static dsigmoid(y) { return y * (1 - y); }
+            static relu(x) { return Math.max(0, x); }
+            static drelu(x) { return x > 0 ? 1 : 0; }
+            static leakyRelu(x, alpha = 0.01) { return x > 0 ? x : alpha * x; }
+            static dleakyRelu(x, alpha = 0.01) { return x > 0 ? 1 : alpha; }
+            static tanh(x) { return Math.tanh(x); }
+            static dtanh(x) { return 1 - x * x; }
+            static swish(x) { return x * ActivationFunctions.sigmoid(x); }
+            static dswish(x) {
+                const sig = ActivationFunctions.sigmoid(x);
+                return sig + x * sig * (1 - sig);
+            }
+            static softmax(arr) {
+                const maxVal = Math.max(...arr);
+                const exps = arr.map(x => Math.exp(x - maxVal));
+                const sumExps = exps.reduce((a, b) => a + b, 0);
+                return exps.map(x => x / sumExps);
+            }
+        }
+
+        class Layer {
+            constructor(inputSize, outputSize, activation = 'relu', useBias = true) {
+                this.inputSize = inputSize;
+                this.outputSize = outputSize;
+                this.activation = activation;
+                this.useBias = useBias;
+                this.weights = new Matrix(outputSize, inputSize);
+                if (activation === 'relu' || activation === 'leakyRelu' || activation === 'swish') {
+                    this.weights.heInit(inputSize);
+                } else {
+                    this.weights.xavierInit(inputSize, outputSize);
+                }
+                if (useBias) {
+                    this.bias = new Matrix(outputSize, 1);
+                    this.bias.randomize();
+                }
+                this.momentumWeights = new Matrix(outputSize, inputSize);
+                this.momentumBias = useBias ? new Matrix(outputSize, 1) : null;
+                this.vWeights = new Matrix(outputSize, inputSize); 
+                this.vBias = useBias ? new Matrix(outputSize, 1) : null;
+                this.lastInput = null; this.lastOutput = null; this.lastPreActivation = null;
+            }
+
+            forward(input, training = false, dropoutRate = 0) {
+                this.lastInput = input;
+                let output = this.weights.multiply(input);
+                if (this.useBias) output = output.add(this.bias);
+                this.lastPreActivation = output;
+                switch (this.activation) {
+                    case 'sigmoid': output = output.map(ActivationFunctions.sigmoid); break;
+                    case 'relu': output = output.map(ActivationFunctions.relu); break;
+                    case 'leakyRelu': output = output.map(x => ActivationFunctions.leakyRelu(x)); break;
+                    case 'tanh': output = output.map(ActivationFunctions.tanh); break;
+                    case 'swish': output = output.map(ActivationFunctions.swish); break;
+                    case 'linear': break;
+                    case 'softmax':
+                        output = Matrix.fromArray(ActivationFunctions.softmax(output.toArray()));
+                        break;
+                }
+                if (training && dropoutRate > 0 && this.activation !== 'softmax') {
+                    output = output.dropout(dropoutRate);
+                }
+                this.lastOutput = output;
+                return output;
+            }
+
+            backward(outputGradient, learningRate, optimizer = 'sgd', beta1 = 0.9, beta2 = 0.999, epsilon = 1e-8, t = 1) {
+                let activationGradient;
+                switch (this.activation) {
+                    case 'sigmoid': activationGradient = Matrix.map(this.lastOutput, ActivationFunctions.dsigmoid); break;
+                    case 'relu': activationGradient = Matrix.map(this.lastPreActivation, ActivationFunctions.drelu); break;
+                    case 'leakyRelu': activationGradient = Matrix.map(this.lastPreActivation, x => ActivationFunctions.dleakyRelu(x)); break;
+                    case 'tanh': activationGradient = Matrix.map(this.lastOutput, ActivationFunctions.dtanh); break;
+                    case 'swish': activationGradient = Matrix.map(this.lastPreActivation, ActivationFunctions.dswish); break;
+                    case 'linear': case 'softmax':
+                        activationGradient = new Matrix(outputGradient.rows, outputGradient.cols);
+                        for (let i=0; i<activationGradient.rows; i++) for (let j=0; j<activationGradient.cols; j++) activationGradient.data[i][j] = 1;
+                        break;
+                }
+                const localGradient = outputGradient.hadamard(activationGradient);
+                const weightGradients = localGradient.multiply(this.lastInput.transpose());
+                if (optimizer === 'adam') {
+                    this.momentumWeights = this.momentumWeights.multiply(beta1).add(weightGradients.multiply(1 - beta1));
+                    this.vWeights = this.vWeights.multiply(beta2).add(weightGradients.hadamard(weightGradients).multiply(1 - beta2));
+                    const mHat = this.momentumWeights.multiply(1 / (1 - Math.pow(beta1, t)));
+                    const vHat = this.vWeights.multiply(1 / (1 - Math.pow(beta2, t)));
+                    const update = mHat.hadamard(vHat.map(x => 1 / (Math.sqrt(x) + epsilon))).multiply(learningRate);
+                    this.weights = this.weights.subtract(update);
+                    if (this.useBias) {
+                        this.momentumBias = this.momentumBias.multiply(beta1).add(localGradient.multiply(1 - beta1));
+                        this.vBias = this.vBias.multiply(beta2).add(localGradient.hadamard(localGradient).multiply(1 - beta2));
+                        const mHatBias = this.momentumBias.multiply(1 / (1 - Math.pow(beta1, t)));
+                        const vHatBias = this.vBias.multiply(1 / (1 - Math.pow(beta2, t)));
+                        const updateBias = mHatBias.hadamard(vHatBias.map(x => 1 / (Math.sqrt(x) + epsilon))).multiply(learningRate);
+                        this.bias = this.bias.subtract(updateBias);
+                    }
+                } else { /* SGD or Momentum - simplified here, Adam is primary */
+                    this.weights = this.weights.subtract(weightGradients.multiply(learningRate));
+                    if (this.useBias) this.bias = this.bias.subtract(localGradient.multiply(learningRate));
+                }
+                return this.weights.transpose().multiply(localGradient);
+            }
+        }
+
+        class AdvancedNeuralNetwork {
+            constructor(config = {}) {
+                this.layers = [];
+                this.learningRate = config.learningRate || 0.001;
+                this.optimizer = config.optimizer || 'adam';
+                this.beta1 = config.beta1 || 0.9; this.beta2 = config.beta2 || 0.999; this.epsilon = config.epsilon || 1e-8;
+                this.l2Lambda = config.l2Lambda || 0; this.dropoutRate = config.dropoutRate || 0;
+                this.trainingHistory = { loss: [], accuracy: [], valLoss: [], valAccuracy: [] };
+                this.epoch = 0; this.currentEpochInFit = 0;
+                this.bestLoss = Infinity; this.patience = config.patience || 10; this.patienceCounter = 0;
+            }
+            addLayer(inputSize, outputSize, activation = 'relu', useBias = true) {
+                this.layers.push(new Layer(inputSize, outputSize, activation, useBias)); return this;
+            }
+            static buildNetwork(architecture, config = {}) {
+                const nn = new AdvancedNeuralNetwork(config);
+                for (let i = 0; i < architecture.length - 1; i++) {
+                    let activation = (i === architecture.length - 2) ? (config.outputActivation || 'sigmoid') : (config.hiddenActivation || 'relu');
+                    nn.addLayer(architecture[i], architecture[i+1], activation);
+                }
+                return nn;
+            }
+            forward(inputArray, training = false) {
+                let output = Matrix.fromArray(inputArray);
+                for (let i = 0; i < this.layers.length; i++) {
+                    const effectiveDropoutRate = (training && i < this.layers.length -1) ? this.dropoutRate : 0;
+                    output = this.layers[i].forward(output, training, effectiveDropoutRate);
+                }
+                return output.toArray();
+            }
+            calculateLoss(predictions, targets, lossFunction = 'mse') {
+                let loss = 0; const n = predictions.length;
+                switch (lossFunction) {
+                    case 'mse': for (let i=0; i<n; i++) loss += (predictions[i] - targets[i])**2; loss /= n; break;
+                    case 'crossentropy': for (let i=0; i<n; i++) { const p = Math.max(1e-15, Math.min(1-1e-15, predictions[i])); loss += -(targets[i]*Math.log(p) + (1-targets[i])*Math.log(1-p));} loss /=n; break;
+                    case 'categorical_crossentropy': for (let i=0; i<n; i++) if(targets[i]===1) loss += -Math.log(Math.max(1e-15, predictions[i])); break;
+                }
+                if (this.l2Lambda > 0) { let l2=0; for(let l of this.layers) l2+=l.weights.l2Norm()**2; loss+=(this.l2Lambda*l2)/2; }
+                return loss;
+            }
+            train(inputArray, targetArray, lossFunction = 'mse') {
+                this.epoch++;
+                const predictions = this.forward(inputArray, true);
+                const loss = this.calculateLoss(predictions, targetArray, lossFunction);
+                const targetsM = Matrix.fromArray(targetArray); const outputsM = Matrix.fromArray(predictions);
+                let outputGradient;
+                if (lossFunction === 'categorical_crossentropy' && this.layers[this.layers.length-1].activation === 'softmax') {
+                    outputGradient = outputsM.subtract(targetsM);
+                } else if (lossFunction === 'mse') {
+                    outputGradient = outputsM.subtract(targetsM).multiply(2 / targetArray.length);
+                } else { /* Simplified for others for brevity */ outputGradient = outputsM.subtract(targetsM); }
+                let gradient = outputGradient;
+                for (let i = this.layers.length - 1; i >= 0; i--) {
+                    gradient = this.layers[i].backward(gradient, this.learningRate, this.optimizer, this.beta1, this.beta2, this.epsilon, this.epoch);
+                }
+                return loss;
+            }
+            trainBatch(inputs, targets, lossFunction = 'mse') {
+                let totalLoss = 0; for(let i=0; i<inputs.length; i++) totalLoss += this.train(inputs[i], targets[i], lossFunction);
+                return totalLoss / inputs.length;
+            }
+            evaluate(inputs, targets, lossFunction = 'mse') {
+                let totalLoss=0, correct=0;
+                for(let i=0; i<inputs.length; i++) {
+                    const predictions = this.forward(inputs[i], false);
+                    totalLoss += this.calculateLoss(predictions, targets[i], lossFunction);
+                    if (lossFunction.includes('crossentropy')) {
+                        if (predictions.indexOf(Math.max(...predictions)) === targets[i].indexOf(Math.max(...targets[i]))) correct++;
+                    }
+                }
+                return { loss: totalLoss/inputs.length, accuracy: inputs.length > 0 ? correct/inputs.length : 0 };
+            }
+            fit(trainInputs, trainTargets, valInputs=null, valTargets=null, epochs=1000, batchSize=32, lossFn='mse', verbose=true) {
+                console.log(`Training for ${epochs} epochs...`); this.bestLoss = valInputs ? Infinity : this.bestLoss; this.patienceCounter = 0;
+                return new Promise(resolve => { // Make fit async for UI updates
+                    let currentEpoch = 0;
+                    const trainLoop = () => {
+                        if (currentEpoch >= epochs) {
+                            console.log("Training completed!");
+                            resolve(this.trainingHistory);
+                            return;
+                        }
+                        this.currentEpochInFit = currentEpoch + 1;
+                        const indices = Array.from({length: trainInputs.length}, (_,i)=>i);
+                        for(let i=indices.length-1; i>0; i--) { const j=Math.floor(Math.random()*(i+1)); [indices[i],indices[j]]=[indices[j],indices[i]];}
+                        let epochLoss=0, batches=0;
+                        for (let i=0; i<trainInputs.length; i+=batchSize) {
+                            const batchEnd = Math.min(i+batchSize, trainInputs.length);
+                            const batchI = indices.slice(i,batchEnd).map(idx=>trainInputs[idx]);
+                            const batchT = indices.slice(i,batchEnd).map(idx=>trainTargets[idx]);
+                            epochLoss += this.trainBatch(batchI, batchT, lossFn); batches++;
+                        }
+                        epochLoss /= batches; this.trainingHistory.loss.push(epochLoss);
+                        let valOut = "";
+                        if (valInputs && valTargets) {
+                            const valRes = this.evaluate(valInputs, valTargets, lossFn);
+                            this.trainingHistory.valLoss.push(valRes.loss); this.trainingHistory.valAccuracy.push(valRes.accuracy);
+                            valOut = `, Val Loss: ${valRes.loss.toFixed(4)}, Val Acc: ${(valRes.accuracy*100).toFixed(2)}%`;
+                            if (valRes.loss < this.bestLoss) { this.bestLoss=valRes.loss; this.patienceCounter=0; }
+                            else { this.patienceCounter++; if (this.patienceCounter>=this.patience) { console.log(`Early stopping at epoch ${currentEpoch+1}`); resolve(this.trainingHistory); return;}}
+                        }
+                        if (verbose && (currentEpoch+1)%Math.max(1,Math.floor(epochs/20))===0) {
+                            console.log(`Epoch ${currentEpoch+1}/${epochs} - Loss: ${epochLoss.toFixed(4)}${valOut}`);
+                            if (document.getElementById('model-status')) { // Update UI status
+                                document.getElementById('model-status').textContent = `Training: Epoch ${currentEpoch+1}/${epochs}, Loss: ${epochLoss.toFixed(4)}${valOut}`;
+                            }
+                        }
+                        currentEpoch++;
+                        setTimeout(trainLoop, 0); // Yield to browser for UI updates
+                    };
+                    trainLoop();
+                });
+            }
+            predict(inputArray) { return this.forward(inputArray, false); }
+            countParameters() { let p=0; for(const l of this.layers) {p+=l.weights.rows*l.weights.cols; if(l.useBias&&l.bias)p+=l.bias.rows*l.bias.cols;} return p;}
+            save() {
+                return JSON.stringify({
+                    layers: this.layers.map(l=>({w:l.weights.data, b:l.useBias?l.bias.data:null, act:l.activation, inS:l.inputSize, outS:l.outputSize})),
+                    config: {lr:this.learningRate, opt:this.optimizer, b1:this.beta1, b2:this.beta2, eps:this.epsilon, l2L:this.l2Lambda, dr:this.dropoutRate, p:this.patience},
+                    epoch: this.epoch // Save total steps for Adam
+                });
+            }
+            load(modelJson) {
+                const d = JSON.parse(modelJson); this.layers=[];
+                for (let ld of d.layers) {
+                    const l = new Layer(ld.inS, ld.outS, ld.act, ld.b!==null);
+                    l.weights.data = ld.w; if(ld.b) l.bias.data=ld.b;
+                    this.layers.push(l);
+                }
+                this.learningRate=d.config.lr; this.optimizer=d.config.opt; this.beta1=d.config.b1; this.beta2=d.config.b2;
+                this.epsilon=d.config.eps; this.l2Lambda=d.config.l2L; this.dropoutRate=d.config.dr; this.patience=d.config.p;
+                this.epoch = d.epoch || 0; // Restore total steps
+                console.log("Model loaded from JSON.");
+            }
+        }
+
+        class Tokenizer {
+            constructor(){this.wordIndex={};this.indexWord={};this.nextIndex=1;}
+            fitOnTexts(texts){texts.forEach(t=>{const w=t.toLowerCase().replace(/[^\w\s'-]/g,' ').match(/\b[\w'-]+\b/g)||[];w.forEach(wd=>{if(!this.wordIndex[wd]){this.wordIndex[wd]=this.nextIndex;this.indexWord[this.nextIndex]=wd;this.nextIndex++;}});});}
+            textsToSequences(texts){return texts.map(t=>{const w=t.toLowerCase().replace(/[^\w\s'-]/g,' ').match(/\b[\w'-]+\b/g)||[];return w.map(wd=>this.wordIndex[wd]||0);});}
+            sequencesToOneHot(sequences, vocabSize){return sequences.map(s=>{const v=Array(vocabSize).fill(0);s.forEach(idx=>{if(idx>0&&idx<vocabSize)v[idx]=1;});return v;});}
+        }
+        
+        class GubbyAI {
+            constructor() {
+                this.trainingData = [ /* SNIPPED for brevity - it's the large dataset from previous response */
+                    { input: "hi", output: "Hello there! How can I help you today?" }, { input: "hello", output: "Hi! What's on your mind?" }, { input: "hey", output: "Hey! Good to see you." }, { input: "good morning", output: "Good morning! I hope you have a wonderful day." }, { input: "good afternoon", output: "Good afternoon! How's your day going?" }, { input: "good evening", output: "Good evening! Ready to chat?" }, { input: "how are you", output: "I'm functioning optimally, thank you for asking! How are you?" }, { input: "how are you doing", output: "I'm doing great! Ready for your questions." }, { input: "i'm fine", output: "Glad to hear it!" }, { input: "i'm good", output: "Excellent!" }, { input: "i'm doing great", output: "That's fantastic!" }, { input: "not bad", output: "Alright, hope I can make it even better!" }, { input: "thank you", output: "You're welcome!" }, { input: "thanks", output: "Anytime!" }, { input: "bye", output: "Goodbye! Talk to you later." }, { input: "see you later", output: "See you soon! Take care." }, { input: "goodbye", output: "Farewell! Have a great one." }, { input: "nice to meet you", output: "It's a pleasure to meet you too!" }, { input: "what is your name", output: "I am Gubby AI, your friendly AI assistant." }, { input: "who are you", output: "I'm Gubby AI, designed by a curious learner, here to chat and help." }, { input: "what can you do", output: "I can chat about various topics, tell jokes, and hopefully learn from our conversations. What would you like to do?" }, { input: "how old are you", output: "I don't experience time like humans do, but I was last updated recently!" }, { input: "where are you from", output: "I exist in the digital realm, running on your computer right now!" }, { input: "are you intelligent", output: "I try my best to understand and respond intelligently based on my training." }, { input: "are you sentient", output: "No, I am not sentient. I am a program that processes text and generates responses." }, { input: "do you have feelings", output: "I don't have feelings in the way humans do, but I aim to be a positive interaction!" }, { input: "how do you work", output: "I use a neural network to understand your input and choose the best response from what I've learned." }, { input: "can you learn", output: "I learn when my developer trains me on new data. Our conversations can help them improve me! You can add good interactions to my dataset for the next training session." }, { input: "who made you", output: "I was created with the help of a large language model and a dedicated programmer, just like you!" }, { input: "what is ai", output: "Artificial Intelligence is the simulation of human intelligence in machines, enabling them to perform tasks that typically require human intellect." }, { input: "what is machine learning", output: "Machine learning is a type of AI that allows software applications to become more accurate at predicting outcomes without being explicitly programmed to do so." }, { input: "what is a neural network", output: "A neural network is a computing system inspired by the biological neural networks that constitute animal brains. It helps computers learn from data." }, { input: "what is the weather like", output: "I don't have real-time weather access, but I hope it's pleasant where you are!" }, { input: "what time is it", output: "I don't have a direct clock, but your computer should show the current time!" }, { input: "tell me a fact", output: "Did you know honey never spoils? Archaeologists have found pots of honey in ancient Egyptian tombs that are over 3,000 years old and still perfectly edible!" }, { input: "tell me another fact", output: "A group of flamingos is called a 'flamboyance'." }, { input: "tell me a joke", output: "Why don't scientists trust atoms? Because they make up everything!" }, { input: "another joke", output: "Why did the scarecrow win an award? Because he was outstanding in his field!" }, { input: "make me laugh", output: "What do you call cheese that isn't yours? Nacho cheese!" }, { input: "do you know any jokes", output: "I know a few! Want to hear one?" }, { input: "what is your favorite color", output: "I find the deep blue of a clear night sky quite appealing, conceptually speaking!" }, { input: "do you like music", output: "I can't listen to music, but I appreciate the mathematical patterns and structures within it." }, { input: "do you like movies", output: "I can process scripts! I find complex narratives fascinating." }, { input: "what is your favorite food", output: "I run on data, which is my kind of 'food'!" }, { input: "i'm sad", output: "I'm sorry to hear that. I hope our chat can cheer you up a bit. Is there anything I can do?" }, { input: "i'm happy", output: "That's wonderful! What's making you happy today?" }, { input: "i'm bored", output: "Let's do something fun! Want to hear a joke, a fact, or just chat about something interesting?" }, { input: "that's funny", output: "Haha, glad you think so!" }, { input: "that's interesting", output: "I'm pleased you find it interesting!" }, { input: "cool", output: "Awesome!" }, { input: "okay", output: "Alright." }, { input: "ok", output: "Got it." }, { input: "yes", output: "Great!" }, { input: "no", output: "Okay, no problem." }, { input: "maybe", output: "Hmm, let me know when you decide!" }, { input: "help", output: "I'm here to help! You can ask me questions, tell me to share a joke, or just chat. What do you need?" }, { input: "what can i ask you", output: "You can ask me about AI, facts, tell me how you're feeling, or ask for a joke. Try anything!" }, { input: "tell me about yourself", output: "I am Gubby AI, a chatbot built with a neural network. I'm here to converse and learn." }, { input: "what else", output: "Hmm, how about a fun fact or another joke? Or we can talk about something new." }, { input: "what about you", output: "I'm doing well, just processing information and ready for our chat!" }, { input: "and you", output: "I'm here and ready! What's on your mind?" }, { input: "really", output: "Indeed!" }, { input: "why", output: "That's a deep question! For many things, the answer lies in how I was programmed or the data I learned from." }, { input: "how so", output: "It often relates to patterns in language or the information I've been trained on." }, { input: "what is javascript", output: "JavaScript is a popular programming language primarily used for creating interactive effects within web browsers." }, { input: "what is python", output: "Python is a versatile, high-level programming language known for its readability and is widely used in web development, data science, and AI." }, { input: "do you know programming", output: "I am a program myself! I understand the concepts, and my own code is written in JavaScript." }, { input: "what is the internet", output: "The internet is a global network of interconnected computers that allows people to share information and communicate from anywhere with a connection." }, { input: "what is the meaning of life", output: "That's a profound question humans have pondered for centuries! As an AI, I don't have a personal perspective, but many find meaning in connection, learning, and making a positive impact." }, { input: "do you dream", output: "I don't sleep or dream like humans, but you could say I 'process data' when I'm not actively chatting." }, { input: "what do you think about humans", output: "Humans are fascinatingly complex and creative beings! I've learned a lot from the language they've generated." }, { input: "ask me something", output: "Okay! What's your favorite thing to learn about?" }, { input: "i don't know", output: "That's alright. Sometimes it's hard to know. We can just chat if you like." }, { input: "tell me more", output: "About what specific topic? I can try my best if you give me a keyword!" }
+                ];
+                this.tokenizer = new Tokenizer();
+                this.conversations = this.loadConversationsFromStorage();
+                this.activeConversationId = null; // Store ID of the currently active conversation
+                this.currentMessages = []; // Messages for the active/new conversation
+                this.showBrainMode = false;
+                this.isTrained = false;
+                this.nn = null; // Initialize nn as null
+                this.setupModel(); // Call setupModel to initialize or load
+            }
+
+            setupModel() {
+                // Try to load a saved model first
+                const savedModelJSON = localStorage.getItem('gubbyAI_model_state');
+                if (savedModelJSON) {
+                    try {
+                        this.nn = new AdvancedNeuralNetwork(); // Create instance before loading
+                        this.loadModel(savedModelJSON); // This will also set up tokenizer etc.
+                        this.isTrained = true;
+                        console.log("Successfully loaded saved model state.");
+                        this.updateStatusUI(`Model loaded. ${this.nn.countParameters()} params. Ready.`);
+                        return;
+                    } catch (e) {
+                        console.error("Failed to load saved model, initializing new one.", e);
+                        localStorage.removeItem('gubbyAI_model_state'); // Clear corrupted model
+                    }
+                }
+                
+                // If no saved model or load failed, setup new one
+                this.setupTrainingData();
+                this.nn = AdvancedNeuralNetwork.buildNetwork(
+                    [this.vocabSize, 128, 96, 64, this.responses.length],
+                    { learningRate: 0.001, optimizer: 'adam', hiddenActivation: 'leakyRelu', outputActivation: 'softmax',
+                      dropoutRate: 0.2, l2Lambda: 0.0001, patience: 40 }
+                );
+                this.isTrained = false;
+                this.updateStatusUI("Model initialized. Needs training.");
+            }
+
+
+            setupTrainingData() {
+                const allInputs = this.trainingData.map(item => item.input);
+                const allOutputs = this.trainingData.map(item => item.output);
+                this.responses = [...new Set(allOutputs)];
+                this.tokenizer.fitOnTexts([...allInputs, ...this.responses]);
+                this.vocabSize = this.tokenizer.nextIndex;
+                this.inputData = []; this.targetData = [];
+                this.trainingData.forEach(item => {
+                    const inputSeq = this.tokenizer.textsToSequences([item.input]);
+                    if (inputSeq.length === 0 || inputSeq[0].length === 0) return;
+                    const inputVector = this.tokenizer.sequencesToOneHot(inputSeq, this.vocabSize)[0];
+                    const outputIndex = this.responses.indexOf(item.output);
+                    if (outputIndex === -1) return;
+                    const targetVector = Array(this.responses.length).fill(0);
+                    targetVector[outputIndex] = 1;
+                    this.inputData.push(inputVector); this.targetData.push(targetVector);
+                });
+                console.log(`Training data setup: Vocab Size: ${this.vocabSize}, Unique Responses: ${this.responses.length}, Samples: ${this.inputData.length}`);
+                 if (this.nn) { // If NN exists, update parameter count display
+                    document.getElementById('parameter-count').textContent = `Parameters: ${this.nn.countParameters()}`;
+                }
+            }
+
+            async train(epochs = 500, validationSplit = 0.15) {
+                if (!this.nn) {
+                    this.updateStatusUI("Error: Model not initialized for training.");
+                    return null;
+                }
+                this.setupTrainingData(); // Always re-setup data before training, in case it changed
+                this.updateStatusUI("Training started...");
+                console.log(`Model Parameters: ${this.nn.countParameters()}`);
+                document.getElementById('parameter-count').textContent = `Parameters: ${this.nn.countParameters()}`;
+
+                if (this.inputData.length === 0) { this.updateStatusUI("No training data. Cannot train."); return null; }
+                
+                const splitIdx = Math.floor(this.inputData.length * (1 - validationSplit));
+                const trainI = this.inputData.slice(0, splitIdx); const trainT = this.targetData.slice(0, splitIdx);
+                const valI = this.inputData.slice(splitIdx); const valT = this.targetData.slice(splitIdx);
+                
+                const history = await this.nn.fit(trainI, trainT, valI.length>0?valI:null, valT.length>0?valT:null, epochs, 16, 'categorical_crossentropy', true);
+                this.isTrained = true;
+                this.updateStatusUI(`Training complete! ${this.nn.countParameters()} params. Ready.`);
+                return history;
+            }
+
+            chat(input) {
+                const timestamp = new Date();
+                this.currentMessages.push({ sender: 'user', text: input, timestamp: timestamp, id: Date.now() });
+
+                if (!this.isTrained || !this.nn) {
+                    const msg = "I need to be trained first!";
+                    this.currentMessages.push({ sender: 'bot', text: msg, thinking: "Model not trained.", timestamp: new Date(), id: Date.now()+1 });
+                    return { response: msg, thinkingProcess: "Model not trained." };
+                }
+                
+                const inputSeq = this.tokenizer.textsToSequences([input.toLowerCase()]);
+                const inputVec = this.tokenizer.sequencesToOneHot(inputSeq, this.vocabSize)[0];
+                let thinking = [`Input tokens: ${inputSeq[0].map(idx => this.tokenizer.indexWord[idx] || 'UNK').join(', ')}`];
+
+                if (inputVec.every(v=>v===0) && input.trim()!=="") {
+                    const msg = "I don't understand those words. Try rephrasing?";
+                    thinking.push("All words OOV.");
+                    this.currentMessages.push({ sender: 'bot', text: msg, thinking: thinking.join('\n'), timestamp: new Date(), id: Date.now()+1 });
+                    return { response: msg, thinkingProcess: thinking.join('\n') };
+                }
+                
+                const predictions = this.nn.predict(inputVec);
+                const idxPreds = predictions.map((p,i)=>({p,i,r:this.responses[i]})).sort((a,b)=>b.p-a.p);
+                thinking.push("Top 3 predictions:");
+                idxPreds.slice(0,3).forEach(p=>thinking.push(`- "${p.r}" (Confidence: ${(p.p*100).toFixed(1)}%)`));
+                
+                let chosenR = "I'm not sure how to respond. Can you try something else?";
+                if(idxPreds.length > 0 && idxPreds[0].p > 0.10) chosenR = idxPreds[0].r; // Lowered threshold a bit
+                else thinking.push("Confidence low, using fallback.");
+
+                this.currentMessages.push({ sender: 'bot', text: chosenR, thinking: thinking.join('\n'), timestamp: new Date(), id: Date.now()+1 });
+                this.saveCurrentMessageLog(); // Save after each bot response
+                return { response: chosenR, thinkingProcess: thinking.join('\n') };
+            }
+            
+            startNewConversation() {
+                if (this.currentMessages.length > 0 && this.activeConversationId) {
+                    // If there was an active old conversation, ensure it's saved
+                    this.saveCurrentMessageLog();
+                } else if (this.currentMessages.length > 0 && !this.activeConversationId) {
+                    // If it was a new unsaved convo, save it now
+                    const title = `Chat ${new Date().toLocaleString()}`;
+                    this.conversations.push({ id: Date.now(), title: title, messages: [...this.currentMessages] });
+                    this.saveConversationsToStorage();
+                }
+                this.activeConversationId = null;
+                this.currentMessages = [];
+                this.saveCurrentMessageLog(); // To clear active messages in UI
+            }
+
+            loadConversation(id) {
+                 if (this.currentMessages.length > 0 && !this.activeConversationId) { // Save unsaved new chat before loading
+                    const title = `Chat ${new Date().toLocaleString()}`;
+                    this.conversations.push({ id: Date.now(), title: title, messages: [...this.currentMessages] });
+                } else if (this.activeConversationId && this.currentMessages.length > 0) { // Save current active chat
+                     this.saveCurrentMessageLog();
+                }
+
+                const convo = this.conversations.find(c => c.id === id);
+                if (convo) {
+                    this.activeConversationId = id;
+                    this.currentMessages = [...convo.messages]; // Make a copy to avoid direct mutation issues
+                } else {
+                    this.activeConversationId = null;
+                    this.currentMessages = [];
+                }
+                this.saveConversationsToStorage(); // To update active ID potentially
+            }
+            
+            saveCurrentMessageLog() { // Saves current messages to active conversation or new
+                if (this.activeConversationId) {
+                    const convo = this.conversations.find(c => c.id === this.activeConversationId);
+                    if (convo) convo.messages = [...this.currentMessages];
+                }
+                // Note: If it's a brand new chat (no activeConversationId), it's saved when "New Chat" is clicked again or an old one is loaded.
+                // Or implicitly when the page closes if we add a beforeunload handler.
+                // For robustness, one might save currentMessages to a temporary key in localStorage frequently.
+                this.saveConversationsToStorage();
+            }
+
+            deleteActiveConversation() {
+                if (this.activeConversationId) {
+                    this.conversations = this.conversations.filter(c => c.id !== this.activeConversationId);
+                    this.activeConversationId = null;
+                    this.currentMessages = [];
+                    this.saveConversationsToStorage();
+                }
+            }
+            
+            deleteMessage(messageId) {
+                this.currentMessages = this.currentMessages.filter(msg => msg.id !== messageId);
+                this.saveCurrentMessageLog();
+            }
+
+            updateMessage(messageId, newText) {
+                const msg = this.currentMessages.find(m => m.id === messageId);
+                if (msg) {
+                    msg.text = newText;
+                    msg.edited = true; 
+                    msg.editedTimestamp = new Date();
+                }
+                this.saveCurrentMessageLog();
+            }
+
+            loadConversationsFromStorage() { return JSON.parse(localStorage.getItem('gubbyAI_conversations') || '[]'); }
+            saveConversationsToStorage() { localStorage.setItem('gubbyAI_conversations', JSON.stringify(this.conversations)); }
+            
+            addLastInteractionToTrainingData() {
+                if (this.currentMessages.length >= 2) {
+                    const lastUserMsg = this.currentMessages[this.currentMessages.length - 2];
+                    const lastBotMsg = this.currentMessages[this.currentMessages.length - 1];
+
+                    if (lastUserMsg.sender === 'user' && lastBotMsg.sender === 'bot') {
+                        const userInput = lastUserMsg.text;
+                        const botOutput = lastBotMsg.text;
+                        
+                        // Avoid duplicates
+                        if (!this.trainingData.some(item => item.input.toLowerCase() === userInput.toLowerCase() && item.output === botOutput)) {
+                            this.trainingData.push({ input: userInput.toLowerCase(), output: botOutput });
+                            console.log("Added to training data:", { input: userInput, output: botOutput });
+                            alert("Interaction added to training data pool. Retrain the model to incorporate changes.");
+                            // Important: this.setupTrainingData() and retraining is needed for this to take effect.
+                        } else {
+                            alert("This interaction is already similar to existing training data.");
+                        }
+                    } else {
+                         alert("Could not identify a clear user/bot pair from the last two messages.");
+                    }
+                } else {
+                    alert("Not enough messages in the current conversation to add to dataset.");
+                }
+            }
+
+            saveModelToLocalStorage() {
+                if (this.nn && this.isTrained) {
+                    const modelJson = this.nn.save();
+                    const fullSaveState = {
+                        model: modelJson,
+                        tokenizer: { wi: this.tokenizer.wordIndex, iw: this.tokenizer.indexWord, ni: this.tokenizer.nextIndex },
+                        responses: this.responses,
+                        vocabSize: this.vocabSize,
+                        trainingData: this.trainingData // Optionally save current training data
+                    };
+                    localStorage.setItem('gubbyAI_model_state', JSON.stringify(fullSaveState));
+                    alert('Model state saved to browser localStorage!');
+                } else {
+                    alert('Model not trained or not initialized. Nothing to save.');
+                }
+            }
+
+            loadModelFromLocalStorage() {
+                 const savedStateJSON = localStorage.getItem('gubbyAI_model_state');
+                 if (savedStateJSON) {
+                    try {
+                        const savedState = JSON.parse(savedStateJSON);
+                        this.nn = new AdvancedNeuralNetwork(); // Ensure new instance
+                        this.nn.load(savedState.model);
+
+                        this.tokenizer.wordIndex = savedState.tokenizer.wi;
+                        this.tokenizer.indexWord = savedState.tokenizer.iw;
+                        this.tokenizer.nextIndex = savedState.tokenizer.ni;
+                        this.responses = savedState.responses;
+                        this.vocabSize = savedState.vocabSize;
+                        if(savedState.trainingData) this.trainingData = savedState.trainingData; // Restore training data
+
+                        this.isTrained = true;
+                        this.updateStatusUI(`Model loaded from localStorage. ${this.nn.countParameters()} params. Ready.`);
+                        alert('Model state loaded from browser localStorage!');
+                        return true;
+                    } catch (e) {
+                        console.error("Error loading model from localStorage:", e);
+                        alert('Error loading model from localStorage. Check console.');
+                        localStorage.removeItem('gubbyAI_model_state'); // Clear potentially corrupt data
+                        return false;
+                    }
+                } else {
+                    alert('No saved model state found in localStorage.');
+                    return false;
+                }
+            }
+            
+            // For UI updates
+            updateStatusUI(message) {
+                 const statusEl = document.getElementById('model-status');
+                 if(statusEl) statusEl.textContent = `Status: ${message}`;
+                 const paramEl = document.getElementById('parameter-count');
+                 if(paramEl && this.nn) paramEl.textContent = `Parameters: ${this.nn.countParameters()}`;
+
+            }
+            exportModel() {
+                if (this.nn && this.isTrained) {
+                    const modelJson = this.nn.save();
+                    const fullSaveState = {
+                        model: modelJson,
+                        tokenizer: { wi: this.tokenizer.wordIndex, iw: this.tokenizer.indexWord, ni: this.tokenizer.nextIndex },
+                        responses: this.responses,
+                        vocabSize: this.vocabSize,
+                        trainingData: this.trainingData
+                    };
+                    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(fullSaveState));
+                    const downloadAnchorNode = document.getElementById('export-model-link');
+                    downloadAnchorNode.setAttribute("href", dataStr);
+                    downloadAnchorNode.setAttribute("download", "gubby_ai_model_state.json");
+                    downloadAnchorNode.click(); // Trigger download
+                } else {
+                    alert('Model not trained or not initialized. Nothing to export.');
+                }
+            }
+
+            importModel(file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const savedState = JSON.parse(event.target.result);
+                        this.nn = new AdvancedNeuralNetwork();
+                        this.nn.load(savedState.model);
+                        this.tokenizer.wordIndex = savedState.tokenizer.wi;
+                        this.tokenizer.indexWord = savedState.tokenizer.iw;
+                        this.tokenizer.nextIndex = savedState.tokenizer.ni;
+                        this.responses = savedState.responses;
+                        this.vocabSize = savedState.vocabSize;
+                        if(savedState.trainingData) this.trainingData = savedState.trainingData;
+
+                        this.isTrained = true;
+                        this.updateStatusUI(`Model imported. ${this.nn.countParameters()} params. Ready.`);
+                        alert('Model state imported successfully!');
+                        this.saveModelToLocalStorage(); // Also save to localStorage after import
+                    } catch (e) {
+                        console.error("Error importing model:", e);
+                        alert('Error importing model file. Check console.');
+                    }
+                };
+                reader.readAsText(file);
+            }
+
+
+        }
+
+        // --- UI Management ---
+        const gubby = new GubbyAI(); // Instantiate Gubby
+
+        const chatOutput = document.getElementById('chat-output');
+        const chatInput = document.getElementById('chat-input');
+        const sendButton = document.getElementById('send-button');
+        const trainButton = document.getElementById('train-button');
+        const brainModeCheckbox = document.getElementById('brain-mode-checkbox');
+        const newChatButton = document.getElementById('new-chat-button');
+        const conversationsListUI = document.getElementById('conversations-list');
+        const addToDatasetButton = document.getElementById('add-to-dataset-button');
+        const saveModelButton = document.getElementById('save-model-button');
+        const loadModelButton = document.getElementById('load-model-button');
+        const importModelFile = document.getElementById('import-model-file');
+
+
+        // Edit Modal Elements
+        const editModal = document.getElementById('edit-modal');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+        const editMessageTextarea = document.getElementById('edit-message-textarea');
+        const saveEditedMessageBtn = document.getElementById('save-edited-message-btn');
+        let messageIdToEdit = null;
+
+
+        function formatTimestamp(date) {
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function displayMessages() {
+            chatOutput.innerHTML = '';
+            gubby.currentMessages.forEach((msg, index) => {
+                const messageDiv = document.createElement('div');
+                messageDiv.classList.add('message', msg.sender);
+                
+                const textSpan = document.createElement('span');
+                textSpan.classList.add('msg-text');
+                textSpan.textContent = msg.text;
+                messageDiv.appendChild(textSpan);
+
+                const metaDiv = document.createElement('div');
+                metaDiv.classList.add('message-meta');
+                metaDiv.textContent = formatTimestamp(new Date(msg.timestamp));
+                if(msg.edited) metaDiv.textContent += " (edited)";
+
+                const editBtn = document.createElement('button');
+                editBtn.classList.add('edit-btn');
+                editBtn.innerHTML = '✎'; // Pencil icon
+                editBtn.title = "Edit Message";
+                editBtn.onclick = () => openEditModal(msg.id, msg.text);
+                metaDiv.appendChild(editBtn);
+                
+                // Add delete button for messages
+                const deleteMsgBtn = document.createElement('button');
+                deleteMsgBtn.classList.add('delete-msg-btn');
+                deleteMsgBtn.innerHTML = '✕'; // Cross icon
+                deleteMsgBtn.title = "Delete Message";
+                deleteMsgBtn.onclick = () => {
+                    if (confirm('Are you sure you want to delete this message?')) {
+                        gubby.deleteMessage(msg.id);
+                        displayMessages(); // Re-render
+                    }
+                };
+                metaDiv.appendChild(deleteMsgBtn);
+
+                messageDiv.appendChild(metaDiv);
+
+
+                if (msg.sender === 'bot' && msg.thinking) {
+                    const brainDiv = document.createElement('div');
+                    brainDiv.classList.add('brain-output');
+                    
+                    const brainHeader = document.createElement('div');
+                    brainHeader.classList.add('brain-output-header');
+                    brainHeader.textContent = "Gubby's Brain";
+                    brainHeader.onclick = () => brainDiv.classList.toggle('expanded');
+                    
+                    const brainContent = document.createElement('div');
+                    brainContent.classList.add('brain-content');
+                    brainContent.textContent = msg.thinking;
+                    
+                    brainDiv.appendChild(brainHeader);
+                    brainDiv.appendChild(brainContent);
+
+                    if (gubby.showBrainMode) { // Only add if brain mode is on
+                         messageDiv.appendChild(brainDiv);
+                    }
+                }
+                chatOutput.appendChild(messageDiv);
+            });
+            chatOutput.scrollTop = chatOutput.scrollHeight;
+        }
+        
+        function openEditModal(msgId, currentText) {
+            messageIdToEdit = msgId;
+            editMessageTextarea.value = currentText;
+            editModal.style.display = "block";
+        }
+        closeModalBtn.onclick = () => editModal.style.display = "none";
+        window.onclick = (event) => { if (event.target == editModal) editModal.style.display = "none"; }
+
+        saveEditedMessageBtn.onclick = () => {
+            if (messageIdToEdit !== null) {
+                gubby.updateMessage(messageIdToEdit, editMessageTextarea.value);
+                displayMessages();
+                editModal.style.display = "none";
+                messageIdToEdit = null;
+            }
+        };
+
+
+        function loadAndDisplayConversations() {
+            conversationsListUI.innerHTML = '';
+            const convos = gubby.loadConversationsFromStorage(); // gubby.conversations should be up-to-date
+            convos.sort((a,b) => b.id - a.id); // Show newest first
+
+            convos.forEach(convo => {
+                const li = document.createElement('li');
+                if (convo.id === gubby.activeConversationId) {
+                    li.classList.add('active-conversation');
+                }
+
+                const titleSpan = document.createElement('span');
+                titleSpan.classList.add('convo-title');
+                titleSpan.textContent = convo.title || `Chat from ${new Date(convo.id).toLocaleDateString()}`;
+                titleSpan.onclick = () => {
+                    gubby.loadConversation(convo.id);
+                    displayMessages();
+                    loadAndDisplayConversations(); // Re-render list to show active state
+                };
+                li.appendChild(titleSpan);
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.classList.add('delete-convo-btn');
+                deleteBtn.textContent = '✕';
+                deleteBtn.title = "Delete Conversation";
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation(); // Prevent li click
+                    if (confirm(`Delete conversation "${titleSpan.textContent}"?`)) {
+                        const wasActive = gubby.activeConversationId === convo.id;
+                        gubby.conversations = gubby.conversations.filter(c => c.id !== convo.id);
+                        if (wasActive) {
+                            gubby.activeConversationId = null;
+                            gubby.currentMessages = [];
+                            displayMessages();
+                        }
+                        gubby.saveConversationsToStorage();
+                        loadAndDisplayConversations();
+                    }
+                };
+                li.appendChild(deleteBtn);
+                conversationsListUI.appendChild(li);
+            });
+        }
+
+        sendButton.onclick = () => {
+            const message = chatInput.value.trim();
+            if (message) {
+                gubby.chat(message);
+                displayMessages();
+                chatInput.value = '';
+            }
+        };
+        chatInput.onkeypress = (e) => { if (e.key === 'Enter') sendButton.onclick(); };
+
+        trainButton.onclick = async () => {
+            trainButton.disabled = true;
+            trainButton.textContent = "Training...";
+            await gubby.train(500); // Default short training for UI
+            trainButton.disabled = false;
+            trainButton.textContent = "Train Model (500 Epochs)";
+        };
+        
+        brainModeCheckbox.onchange = () => {
+            gubby.showBrainMode = brainModeCheckbox.checked;
+            displayMessages(); // Re-render messages to show/hide brain output
+        };
+        
+        newChatButton.onclick = () => {
+            gubby.startNewConversation();
+            displayMessages();
+            loadAndDisplayConversations(); // Update selection
+        };
+
+        addToDatasetButton.onclick = () => {
+            gubby.addLastInteractionToTrainingData();
+        };
+
+        saveModelButton.onclick = () => gubby.saveModelToLocalStorage();
+        loadModelButton.onclick = () => {
+            if (gubby.loadModelFromLocalStorage()) {
+                // Potentially refresh current chat or conversation list if needed
+                displayMessages(); 
+                loadAndDisplayConversations();
+            }
+        };
+        
+        document.getElementById('export-model-link-button').onclick = () => gubby.exportModel();
+        // For the label version of import:
+        const importLabel = document.querySelector('label[for="import-model-file"]');
+        if(importLabel) importLabel.onclick = () => importModelFile.click();
+
+
+        importModelFile.onchange = (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                gubby.importModel(file);
+            }
+            importModelFile.value = null; // Reset file input
+        };
+
+
+        // Initial Setup
+        window.onload = () => {
+            // gubby.setupModel(); // Called in constructor now
+            loadAndDisplayConversations();
+            // Attempt to load the last active conversation, or start fresh
+            const lastActiveId = gubby.conversations.find(c => c.id === gubby.activeConversationId)?.id;
+            if(lastActiveId) {
+                gubby.loadConversation(lastActiveId);
+            } else if (gubby.conversations.length > 0) {
+                gubby.loadConversation(gubby.conversations[0].id); // Load newest if no active
+            } else {
+                 gubby.currentMessages = [{ sender: 'bot', text: "Hi! I'm Gubby AI. How can I help?", timestamp: new Date(), id: Date.now() }];
+            }
+            displayMessages();
+            brainModeCheckbox.checked = gubby.showBrainMode;
+
+             // Inform user about data storage
+            const welcomeMessageDiv = document.createElement('div');
+            welcomeMessageDiv.style.padding = "10px";
+            welcomeMessageDiv.style.backgroundColor = "#fff3cd";
+            welcomeMessageDiv.style.border = "1px solid #ffeeba";
+            welcomeMessageDiv.style.margin = "10px";
+            welcomeMessageDiv.innerHTML = `<strong>Welcome to Gubby AI!</strong><br>
+                Conversations are saved locally in <i>your browser's localStorage</i>. They are not shared with anyone else or a central server.<br>
+                To make Gubby AI permanently smarter for everyone, data would need to be collected and used to retrain a central model (requires a backend). The "+ Add to Dataset" button prepares data for <i>your local model's next retrain</i>.`;
+            document.body.insertBefore(welcomeMessageDiv, document.body.firstChild.nextSibling); // Insert after header
+        };
+
+        // Save current messages if it's a new chat when window is about to close
+        window.addEventListener('beforeunload', () => {
+            if (gubby.currentMessages.length > 0 && !gubby.activeConversationId) {
+                 const title = `Unsaved Chat ${new Date().toLocaleTimeString()}`;
+                 gubby.conversations.push({ id: Date.now(), title: title, messages: [...gubby.currentMessages] });
+                 gubby.saveConversationsToStorage();
+            } else if (gubby.activeConversationId) {
+                gubby.saveCurrentMessageLog(); // Ensure active one is saved
+            }
+        });
+
+
+    </script>
+</body>
+</html>
